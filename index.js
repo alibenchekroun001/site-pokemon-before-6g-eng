@@ -1,6 +1,3 @@
-// Assure-toi que <script src="index.js" defer></script> ou que le script est chargé après le HTML.
-
-// ---------- Données ----------
 const TYPES = [
   'Normal','Grass','Fire','Water','Electric','Ice','Fighting','Poison','Ground','Flying',
   'Psychic','Bug','Rock','Ghost','Dragon','Dark','Steel','Fairy'
@@ -27,7 +24,6 @@ const TYPE_CHART = {
   Fairy: {  }
 };
 
-// ---------- Utilitaires ----------
 function getMultiplier(attacker, defender){
   const m = TYPE_CHART[attacker];
   if(!m) return 1;
@@ -53,7 +49,6 @@ function pulseButton(btn){
   setTimeout(() => btn.style.transform = 'scale(1)', 140);
 }
 
-// ---------- DOM helpers ----------
 function clearAndFocus(container){
   container.innerHTML = '';
   container.scrollTop = 0;
@@ -66,7 +61,6 @@ function make(titleText){
   return el;
 }
 
-// ---------- Création de la grille ----------
 function createTypeGrid(container, onClick, small=false){
   const grid = document.createElement('div');
   grid.className = 'type-grid';
@@ -88,7 +82,6 @@ function createTypeGrid(container, onClick, small=false){
   animateIn(grid, { fromY: 10, delay: 0 });
 }
 
-// ---------- Affichage des résultats ----------
 function showResults(parent, lists, modeLabel){
   clearAndFocus(parent);
   const wrapper = document.createElement('div');
@@ -112,8 +105,8 @@ function showResults(parent, lists, modeLabel){
   }
 
   const p1 = makePanel('Super Effective (x2 or x4)', lists.forces);
-  const p2 = makePanel('Not very effective/Immune (x0, x0.25, x0.5)', lists.weaknesses);
-  const p3 = makePanel('Neutral (x1)', lists.neutral);
+  const p2 = makePanel('Not very effective (x0.25, x0.5)', lists.weaknesses);
+  const p3 = makePanel('Immune (x0)', lists.neutral);
 
   wrapper.appendChild(p1);
   wrapper.appendChild(p2);
@@ -126,117 +119,74 @@ function showResults(parent, lists, modeLabel){
   });
 }
 
-// ---------- Bouton Back ----------
-function addBackButton(container){
-  const old = document.getElementById('back-btn');
-  if(old) old.remove();
-  const btn = document.createElement('button');
-  btn.id = 'back-btn';
-  btn.textContent = 'Back';
-  btn.addEventListener('click', () => {
-    const app = document.getElementById('app');
-    if(app) attackMode(app);
-  });
-  container.appendChild(btn);
-}
-
-// ---------- Modes ----------
 function attackMode(root){
-  clearAndFocus(root);
-  root.appendChild(make('Attack Mode — Choose an Attacking Type'));
-  createTypeGrid(root, (type) => {
-    const forces = [], weaknesses = [], neutral = [];
-    TYPES.forEach(def => {
-      const m = getMultiplier(type, def);
-      if(m === 2) forces.push({type:def, mult:'x2'});
-      else if(m === 0.5) weaknesses.push({type:def, mult:'x0.5'});
-      else if(m === 0) weaknesses.push({type:def, mult:'x0'});
-      else neutral.push({type:def, mult:'x1'});
-    });
-    showResults(root, {forces, weaknesses, neutral}, 'attaque');
-    addBackButton(root);
-  });
-  addBackButton(root);
+  clearAndFocus(root);
+  root.appendChild(make('Attack Mode — Choose an Attacking Type'));
+  createTypeGrid(root, (type) => {
+    const forces = [], weaknesses = [], neutral = [];
+    TYPES.forEach(def => {
+      const m = getMultiplier(type, def);
+      if(m === 2) forces.push({type:def, mult:'x2'});
+      else if(m === 0.5) weaknesses.push({type:def, mult:'x0.5'});
+      else if(m === 0) neutral.push({type:def, mult:'x0'}); 
+    });
+    showResults(root, {forces, weaknesses, neutral}, 'attaque');
+  });
 }
 
 function defenseSingleMode(root){
-  clearAndFocus(root);
-  root.appendChild(make('Defense Mode (1 type) — Choose a Defender Type'));
-  createTypeGrid(root, (type) => {
-    const forces = [], weaknesses = [], neutral = [];
-    TYPES.forEach(att => {
-      const m = getMultiplier(att, type);
-      if(m === 2) forces.push({type:att, mult:'x2'});
-      else if(m === 0 || m === 0.5) weaknesses.push({type:att, mult: m===0 ? 'x0' : 'x0.5'});
-      else neutral.push({type:att, mult:'x1'});
-    });
-    showResults(root, {forces, weaknesses, neutral}, 'defense-single');
-    addBackButton(root);
-  });
+  clearAndFocus(root);
+  root.appendChild(make('Defense Mode (1 type) — Choose a Defender Type'));
+  createTypeGrid(root, (type) => {
+    const forces = [], weaknesses = [], neutral = []; 
+    TYPES.forEach(att => {
+      const m = getMultiplier(att, type);
+      if(m === 2) forces.push({type:att, mult:'x2'}); 
+      else if(m === 0.5) weaknesses.push({type:att, mult:'x0.5'}); 
+      else if(m === 0) neutral.push({type:att, mult:'x0'}); 
+    });
+    showResults(root, {forces, weaknesses, neutral}, 'defense-single');
+  });
 }
 
 function defenseDoubleMode(root){
-  clearAndFocus(root);
-  root.appendChild(make('Defense Mode (2 types) — Select the first type'));
-  createTypeGrid(root, (first) => {
-    clearAndFocus(root);
+  clearAndFocus(root);
+  root.appendChild(make('Defense Mode (2 types) — Select the first type'));
+  createTypeGrid(root, (first) => {
+    clearAndFocus(root);
+    const info = document.createElement('div'); 
+    info.className='center';
+    info.innerHTML = `<h2>Choose the second type (1st: ${first})</h2>`;
+    root.appendChild(info);
 
-    const info = document.createElement('div'); 
-    info.className='center';
-    info.innerHTML = `<h2>Choose the second type (1st: ${first})</h2>`;
-    root.appendChild(info);
+    createTypeGrid(root, (second) => {
+      const forces = [], weaknesses = [], neutral = [];
+      TYPES.forEach(att => {
+        const m1 = getMultiplier(att, first);
+        const m2 = getMultiplier(att, second);
+        const mult = +(m1 * m2); 
 
-    const grid = document.createElement('div');
-    grid.className = 'type-grid';
+        if(mult === 4 || mult === 2) {
+          forces.push({type:att, mult: mult === 4 ? 'x4' : 'x2'});
+        } else if(mult === 0.5 || mult === 0.25) {
+          weaknesses.push({type:att, mult: mult === 0.5 ? 'x0.5' : 'x0.25'});
+        } else if(mult === 0) {
+          neutral.push({type:att, mult:'x0'}); 
+        }
+      });
+      showResults(root, {forces, weaknesses, neutral}, 'defense-double');
+    });
 
-    TYPES.forEach(t => {
-      const cell = document.createElement('div');
-      cell.className = `type-cell type-${t}`;
-      cell.textContent = t;
-      cell.dataset.type = t;
-
-      if(t === first){
-        // Style pour indiquer que ce type est déjà choisi
-        cell.style.backgroundColor = 'white';
-        cell.style.color = 'black';
-        cell.style.cursor = 'not-allowed';
-      } else {
-        cell.style.cursor = 'pointer';
-        cell.addEventListener('click', () => {
-          pulseButton(cell);
-
-          const forces = [], weaknesses = [], neutral = [];
-          TYPES.forEach(att => {
-            const m1 = getMultiplier(att, first);
-            const m2 = getMultiplier(att, t);
-            const mult = +(m1 * m2);
-
-            if(mult === 2 || mult === 4){
-              forces.push({type:att, mult: mult===4 ? 'x4' : 'x2'});
-            } else if(mult === 0 || mult === 0.5 || mult === 0.25){
-              let label = mult === 0 ? 'x0' : mult === 0.5 ? 'x0.5' : 'x0.25';
-              weaknesses.push({type:att, mult:label});
-            } else {
-              neutral.push({type:att, mult:'x1'});
-            }
-          });
-
-          showResults(root, {forces, weaknesses, neutral}, 'defense-double');
-          addBackButton(root);
-        });
-      }
-
-      grid.appendChild(cell);
-      animateIn(cell, { fromY: 8, delay: 15 * (TYPES.indexOf(t) % 6) });
-    });
-
-    root.appendChild(grid);
-    addBackButton(root);
-  });
+    const gridCells = document.querySelectorAll('.type-grid .type-cell');
+    gridCells.forEach(cell => {
+      if(cell.dataset.type === first){
+        cell.classList.add('type-selected');
+        cell.removeEventListener('click', cell.onclick);
+      }
+    });
+  });
 }
 
-
-// ---------- Initial wiring ----------
 window.addEventListener('DOMContentLoaded', () => {
   const attackBtn = document.getElementById('attack-btn');
   const defenseBtn = document.getElementById('defense-btn');
@@ -266,6 +216,30 @@ window.addEventListener('DOMContentLoaded', () => {
     animateIn(controls, { fromY: 8 });
   });
 
-  // auto-open attaque par défaut
   attackMode(app);
 });
+function addBackButton() {
+    const btn = document.createElement("button");
+    btn.id = "backButton";
+    btn.textContent = "Back";
+
+    btn.style.display = "block";
+    btn.style.margin = "40px auto";
+    btn.style.padding = "12px 20px";
+    btn.style.background = "#777777ff";
+    btn.style.color = "white";
+    btn.style.border = "none";
+    btn.style.borderRadius = "8px";
+    btn.style.cursor = "pointer";
+    btn.style.fontSize = "16px";
+
+    btn.addEventListener("click", () => {
+        const app = document.getElementById('app');
+        app.innerHTML = ''; 
+        attackMode(app);     
+    });
+
+    document.querySelector("main.container").appendChild(btn);
+}
+
+window.addEventListener("DOMContentLoaded", addBackButton);
